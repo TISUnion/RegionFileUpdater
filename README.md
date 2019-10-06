@@ -32,5 +32,5 @@ A MCDeamon plugin to help update region files
 
 # 例子 / Sample
 
-`!!region add 0 3 2` 添加主世界的r.3.2.mca至更新列表
+`!!region add 0 3 2` 添加主世界的r.3.2.mca至更新列表 / add overworld's r.3.2.mca to the updating list
 

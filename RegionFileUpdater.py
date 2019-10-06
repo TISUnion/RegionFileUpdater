@@ -180,7 +180,7 @@ def onServerInfo(server, info):
 		else:
 			printMessage(server, info, '区域文件坐标错误！')
 	# delete-all
-	elif cmdLen == 1 and command[0] == 'delete-all' and info.isPlayer:
+	elif cmdLen == 1 and command[0] == 'delete-all':
 		deleteRegionList(server, info)
 	# del
 	elif cmdLen == 1 and command[0] == 'del' and info.isPlayer:

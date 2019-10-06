@@ -15,7 +15,7 @@ LogFileFolder = 'plugins/' + PluginName + '/'
 LogFilePath = LogFileFolder + 'log.log'
 Debug_output = 0
 DimensionRegionFolder = {-1: 'DIM-1/region/', 0: 'region/', 1: 'DIM1/region/'}
-HelpMessage = '''------MCD ''' + PluginName + ''' v0.4------
+HelpMessage = '''------MCD ''' + PluginName + ''' v1.0------
 一个更新本服区域文件至生存服!!qb存档区域文件的插件
 §a【指令说明】§r
 §7''' + Prefix + ''' §r显示帮助信息
@@ -201,5 +201,6 @@ def onServerInfo(server, info):
 	# update
 	elif cmdLen == 1 and command[0] == 'update':
 		updateRegionFile(server, info)
+	# else
 	else:
 		printMessage(server, info, '参数错误！请输入§7' + Prefix + '§r以获取插件帮助')

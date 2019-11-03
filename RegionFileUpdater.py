@@ -45,13 +45,13 @@ def debug_print_list(server, info, msg, lst):
 		for i in lst:
 			debug_print(server, info, ' ' + i)
 
-def printMessage(server, info, msg, istell = True):
+def printMessage(server, info, msg, isBroadcast = False):
 	for line in msg.splitlines():
 		if info.isPlayer:
-			if istell:
-				server.tell(info.player, line)
-			else:
+			if isBroadcast:
 				server.say(line)
+			else:
+				server.tell(info.player, line)
 		else:
 			print line
 		
@@ -125,7 +125,7 @@ def updateRegionFile(server, info):
 	countdown = 5
 	printMessage(server, info, '[' + PluginName + ']: ' + str(countdown) + '秒后重启服务器更新列表中的区域文件')
 	for i in range(1,countdown):
-		printMessage(server, info, '[' + PluginName + ']: 还有' + str(countdown - i) + '秒')
+		printMessage(server, info, '[' + PluginName + ']: 还有' + str(countdown - i) + '秒', isBroadcast = True)
 		time.sleep(1)
 	server.stop()
 	time.sleep(10)

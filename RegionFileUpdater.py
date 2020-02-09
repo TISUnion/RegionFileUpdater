@@ -20,16 +20,20 @@ HelpMessage = '''------MCD ''' + PluginName + ''' v1.0------
 §a【指令说明】§r
 §7''' + Prefix + ''' §r显示帮助信息
 §7''' + Prefix + ''' add §r添加玩家所在位置的区域文件
-§7''' + Prefix + ''' add §6[d] [x] [z] §r添加指定的区域文件
+§7''' + Prefix + ''' add §6<d> <x> <z> [<x'> <z'>] §r添加指定的区域文件
 §7''' + Prefix + ''' del §r删除玩家所在位置的区域文件
-§7''' + Prefix + ''' del §6[d] [x] [z] §r删除指定的区域文件
+§7''' + Prefix + ''' del §6<d> <x> <z> [<x'> <z'>] §r删除指定的区域文件
 §7''' + Prefix + ''' delete-all §r删除所有区域文件
+§7''' + Prefix + ''' add-corner-a §r以玩家所在位置为角落a添加区域文件
+§7''' + Prefix + ''' add-corner-b §r以玩家所在位置为角落b添加区域文件
+§7''' + Prefix + ''' del-corner-a §r以玩家所在位置为角落b删除区域文件
+§7''' + Prefix + ''' del-corner-b §r以玩家所在位置为角落b删除区域文件
 §7''' + Prefix + ''' list §r列出待更新的区域文件
 §7''' + Prefix + ''' history §r输出上一次update的结果
 §7''' + Prefix + ''' update §r更新列表中的区域文件，这将重启服务器
 §a【参数说明】§r
-§6[d]§r: 维度序号，主世界为0，下界为-1，末地为1
-§6[x] [z]§r: 区域文件坐标，如r.-3.1.mca的区域文件坐标为x=-3 z=1
+§6<d>§r: 维度序号，主世界为0，下界为-1，末地为1
+§6<x> <z>§r: 区域文件坐标，如r.-3.1.mca的区域文件坐标为x=-3 z=1
 '''
 
 regionList = []

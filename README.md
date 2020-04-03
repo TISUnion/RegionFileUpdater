@@ -1,8 +1,12 @@
 # RegionFileUpdater
 
-一个更新本服区域文件至生存服!!qb存档区域文件的插件
+一个更新本服区域文件至生存服 `!!qb` 存档区域文件的插件
+
+兼容 [MCDaemon](https://github.com/kafuuchino-desu/MCDaemon) 以及 [MCDReforged](https://github.com/Fallen-Breath/MCDReforged)
 
 A MCDeamon plugin to help update region files
+
+Compatible with [MCDaemon](https://github.com/kafuuchino-desu/MCDaemon) and [MCDReforged](https://github.com/Fallen-Breath/MCDReforged)
 
 # 指令说明 / Command description
 

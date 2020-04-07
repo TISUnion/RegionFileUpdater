@@ -240,3 +240,7 @@ def on_info(server, info):
 	info2 = copy.deepcopy(info)
 	info2.isPlayer = info2.is_player
 	onServerInfo(server, info2)
+
+
+def on_load(server, old):
+	server.add_help_message(Prefix, '从指定存档处更新region文件至本服')

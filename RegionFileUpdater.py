@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import copy
 import os
-import json
-import re
+from imp import load_source
 import time
 try:
 	import Queue
@@ -37,7 +36,6 @@ HelpMessage = '''------MCD ''' + PluginName + ''' v1.0------
 
 regionList = []
 historyList = []
-queue = Queue.Queue()
 
 
 def printMessage(server, info, msg, isBroadcast=False):
@@ -61,28 +59,12 @@ def printLog(msg):
 		logfile.write(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ': ' + msg + '\n')
 
 
-def minecraft_json_parser(text):
-	text = re.sub(r'^.* has the following entity data: ', '', text)  # yeet prefix
-	text = re.sub(r'(?<=\d)[a-zA-Z](?=\D)', '', text)  # remove letter after number
-	text = re.sub(r'([a-zA-Z.]+)(?=:)', '"\g<1>"', text)  # add quotation marks to all
-	list_a = re.split(r'""[a-zA-Z.]+":', text)  # add quotation marks to all
-	list_b = re.findall(r'""[a-zA-Z.]+":', text)  # add quotation marks to all
-	result = list_a[0]
-	for i in range(len(list_b)):
-		result += list_b[i].replace('""', '"').replace('":', ':') + list_a[i + 1]
-	return json.loads(result)
-
-
 def getPlayerInfo(server, name, path=''):
-	if len(path) >= 1 and not path.startswith(' '):
-		path = ' ' + path
-	server.execute('data get entity {}{}'.format(name, path))
-	global queue
-	for i in range(1000):
-		if not queue.empty():
-			break
-		time.sleep(0.01)
-	return queue.get()
+	if hasattr(server, 'MCDR'):
+		api = server.get_plugin_instance('PlayerInfoAPI')
+	else:
+		api = load_source('PlayerInfoAPI', './plugins/PlayerInfoAPI.py')
+	return api.getPlayerInfo(server, name, path)
 
 
 def getRegionFilePath(regionfile):
@@ -181,10 +163,6 @@ def updateRegionFile(server, info):
 
 
 def onServerInfo(server, info):
-	if ' has the following entity data: ' in info.content:
-		player_info = minecraft_json_parser(info.content)
-		global queue
-		queue.put(player_info)
 	content = info.content
 	if not info.isPlayer and content.endswith('<--[HERE]'):
 		content = content.replace('<--[HERE]', '')

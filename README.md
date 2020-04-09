@@ -4,9 +4,13 @@
 
 兼容 [MCDaemon](https://github.com/kafuuchino-desu/MCDaemon) 以及 [MCDReforged](https://github.com/Fallen-Breath/MCDReforged)
 
+需要 [PlayerInfoAPI](https://github.com/TISUnion/PlayerInfoAPI)
+
 A MCDeamon plugin to help update region files
 
 Compatible with [MCDaemon](https://github.com/kafuuchino-desu/MCDaemon) and [MCDReforged](https://github.com/Fallen-Breath/MCDReforged)
+
+[PlayerInfoAPI](https://github.com/TISUnion/PlayerInfoAPI) is needed
 
 # 指令说明 / Command description
 

@@ -2,6 +2,7 @@
 import copy
 import os
 import shutil
+from collections import namedtuple
 from imp import load_source
 import time
 try:
@@ -19,7 +20,7 @@ LogFilePath = LogFileFolder + PluginName + '.log'
 Debug_output = 0
 DimensionRegionFolder = {-1: 'DIM-1/region/', 0: 'region/', 1: 'DIM1/region/'}
 HelpMessage = '''
-------MCD ''' + PluginName + ''' v1.1------
+------MCD ''' + PluginName + ''' v1.2------
 一个更新本服区域文件至生存服!!qb存档区域文件的插件
 §a【指令说明】§r
 §7{0} §r显示帮助信息
@@ -35,6 +36,7 @@ HelpMessage = '''
 §6[d]§r: 维度序号，主世界为0，下界为-1，末地为1
 §6[x] [z]§r: 区域文件坐标，如r.-3.1.mca的区域文件坐标为x=-3 z=1
 '''.strip().format(Prefix)
+Region = namedtuple('Region', 'dim x z')
 
 regionList = []
 historyList = []
@@ -48,7 +50,7 @@ def printMessage(server, info, msg, isBroadcast=False):
 			else:
 				server.tell(info.player, line)
 		else:
-			print(line)
+			print('[RegionFileUpdater] ' + line)
 
 
 def printLog(msg):
@@ -59,7 +61,7 @@ def printLog(msg):
 			pass
 	with open(LogFilePath, 'a') as logfile:
 		logfile.write(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ': ' + msg + '\n')
-	print(msg)
+	print('[RegionFileUpdater] ' + msg)
 
 
 def getPlayerInfo(server, name, path=''):
@@ -70,31 +72,31 @@ def getPlayerInfo(server, name, path=''):
 	return api.getPlayerInfo(server, name, path)
 
 
-def getRegionFileName(regionfile):
-	return 'r.' + str(regionfile[1]) + '.' + str(regionfile[2]) + '.mca'
+def getRegionFileName(region):
+	return 'r.' + str(region.x) + '.' + str(region.z) + '.mca'
 
 
-def getRegionFilePath(regionfile):
-	path = os.path.join(DimensionRegionFolder[regionfile[0]], getRegionFileName(regionfile))
+def getRegionFilePath(region):
+	path = os.path.join(DimensionRegionFolder[region.dim], getRegionFileName(region))
 	return path
 
 
-def addRegion(server, info, regionFile):
+def addRegion(server, info, region):
 	global regionList
-	if regionFile in regionList:
+	if region in regionList:
 		printMessage(server, info, '列表中已存在该区域文件')
 	else:
-		regionList.append(regionFile)
-		printMessage(server, info, '区域文件§6{}§r已添加'.format(getRegionFilePath(regionFile)))
+		regionList.append(region)
+		printMessage(server, info, '区域文件§6{}§r已添加'.format(getRegionFilePath(region)))
 
 
-def delRegion(server, info, regionFile):
+def delRegion(server, info, region):
 	global regionList
-	if regionFile not in regionList:
+	if region not in regionList:
 		printMessage(server, info, '列表中不存在该区域文件')
 	else:
-		regionList.remove(regionFile)
-		printMessage(server, info, '区域文件§6{}§r已删除'.format(getRegionFilePath(regionFile)))
+		regionList.remove(region)
+		printMessage(server, info, '区域文件§6{}§r已删除'.format(getRegionFilePath(region)))
 
 
 def deleteRegionList(server, info):
@@ -104,19 +106,23 @@ def deleteRegionList(server, info):
 
 
 def getRegionFileFromPlayer(server, player):
-	playerInfo = getPlayerInfo(server, player)
-	d = playerInfo['Dimension']
-	x = int(playerInfo['Pos'][0]) // 512
-	z = int(playerInfo['Pos'][2]) // 512
-	return d, x, z
+	d = getPlayerInfo(server, player, 'Dimension')
+	pos = getPlayerInfo(server, player, 'Pos')
+	x = int(pos[0] // 512)
+	z = int(pos[2] // 512)
+	return Region(d, x, z)
 
 
 def getRegionFileFromParameter(p):
-	d = int(p[0])
-	x = int(p[1])
-	z = int(p[2])
-	flag = d in [-1, 0, 1]
-	return (d, x, z), flag
+	try:
+		d = int(p[0])
+		x = int(p[1])
+		z = int(p[2])
+		flag = d in [-1, 0, 1]
+	except:
+		return None, False
+	else:
+		return Region(d, x, z), flag
 
 
 def printRegionList(server, info):
@@ -130,8 +136,8 @@ def printRegionHistory(server, info):
 	global historyList
 	printMessage(server, info, '上次尝试更新更新了{}个区域文件'.format(len(historyList)))
 	msg = {False: '失败', True: '成功'}
-	for history in historyList:
-		printMessage(server, info, '§6{}§r: {}'.format(getRegionFilePath(history[0]), msg[history[1]]))
+	for region, flag in historyList:
+		printMessage(server, info, '§6{}§r: {}'.format(getRegionFilePath(region), msg[flag]))
 
 
 def updateRegionFile(server, info):
@@ -157,11 +163,11 @@ def updateRegionFile(server, info):
 	printLog(name + '更新了' + str(len(regionList)) + '个区域文件：')
 	historyList = []
 	for region in regionList:
-		sourceFilePath = os.path.join(SourceWorldPath, getRegionFilePath(region))
-		destinationFilePath = os.path.join(DestinationWorldPath, DimensionRegionFolder[region[0]], getRegionFileName(region))
+		source = os.path.join(SourceWorldPath, getRegionFilePath(region))
+		destination = os.path.join(DestinationWorldPath, DimensionRegionFolder[region.dim], getRegionFileName(region))
 		try:
-			print('[{}] {} -> {}'.format(PluginName, sourceFilePath, destinationFilePath))
-			shutil.copyfile(sourceFilePath, destinationFilePath)
+			print('[{}] {} -> {}'.format(PluginName, source, destination))
+			shutil.copyfile(source, destination)
 		except Exception as e:
 			msg = '失败，错误信息：{}'.format(str(e))
 			flag = False
@@ -196,9 +202,9 @@ def onServerInfo(server, info):
 		addRegion(server, info, getRegionFileFromPlayer(server, info.player))
 	# add [d] [x] [y]
 	elif cmdLen == 4 and command[0] == 'add':
-		ret = getRegionFileFromParameter(command[1:])
-		if (ret[1]):
-			addRegion(server, info, ret[0])
+		region, flag = getRegionFileFromParameter(command[1:])
+		if flag:
+			addRegion(server, info, region)
 		else:
 			printMessage(server, info, '区域文件坐标错误！')
 	# delete-all
@@ -209,9 +215,9 @@ def onServerInfo(server, info):
 		delRegion(server, info, getRegionFileFromPlayer(server, info.player))
 	# del [d] [x] [y]
 	elif cmdLen == 4 and command[0] == 'del':
-		ret = getRegionFileFromParameter(command[1:])
-		if (ret[1]):
-			delRegion(server, info, ret[0])
+		region, flag = getRegionFileFromParameter(command[1:])
+		if flag:
+			delRegion(server, info, region)
 		else:
 			printMessage(server, info, '区域文件坐标错误！')
 	# list
@@ -236,3 +242,6 @@ def on_info(server, info):
 
 def on_load(server, old):
 	server.add_help_message(Prefix, '从指定存档处更新region文件至本服')
+	if hasattr(old, 'historyList'):
+		global historyList
+		historyList = old.historyList

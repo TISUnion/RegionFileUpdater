@@ -1,16 +1,16 @@
-# RegionFileUpdater
+# Region File Updater
 
 一个更新本服区域文件至生存服 `!!qb` 存档区域文件的插件
 
-兼容 [MCDaemon](https://github.com/kafuuchino-desu/MCDaemon) 以及 [MCDReforged](https://github.com/Fallen-Breath/MCDReforged)
+需要 [MCDReforged](https://github.com/Fallen-Breath/MCDReforged) v1.0 以上
 
-需要 [PlayerInfoAPI](https://github.com/TISUnion/PlayerInfoAPI)
+需要 [MinecraftDataAPI](https://github.com/MCDReforged/MinecraftDataAPI)
 
-A MCDeamon plugin to help update region files
+A MCDR plugin to help you update region files in game
 
-Compatible with [MCDaemon](https://github.com/kafuuchino-desu/MCDaemon) and [MCDReforged](https://github.com/Fallen-Breath/MCDReforged)
+[MCDReforged](https://github.com/Fallen-Breath/MCDReforged) v1.0+ is required
 
-[PlayerInfoAPI](https://github.com/TISUnion/PlayerInfoAPI) is needed
+[MinecraftDataAPI](https://github.com/MCDReforged/MinecraftDataAPI) is needed
 
 # 指令说明 / Command description
 

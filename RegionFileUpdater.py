@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
+import json
 import os
 import shutil
 import time
+from json import JSONDecodeError
 from typing import List, Tuple
 
 from mcdreforged.api.all import *
 
 PLUGIN_METADATA = {
 	'id': 'region_file_updater',
-	'version': '1.3.0',
+	'version': '1.4.0',
 	'name': 'Region file Updater',
 	'description': 'A MCDR plugin to help you update region files in game',
 	'author': 'Fallen_Breath',
@@ -18,16 +20,23 @@ PLUGIN_METADATA = {
 	}
 }
 
-SourceWorldPath = './qb_multi/slot1/world/'
-DestinationWorldPath = './server/world/'
+
+config = {
+	'enabled': True,
+	'source_world_directory': './qb_multi/slot1/world',
+	'destination_world_directory':  './server/world',
+	'dimension_region_folder':  {
+		'-1': 'DIM-1/region',
+		'0': 'region',
+		'1': 'DIM1/region'
+	}
+}
+DEFAULT_CONFIG = config.copy()
+CONFIG_FILE_PATH = os.path.join('config', '{}.json'.format(PLUGIN_METADATA['id']))
+
 Prefix = '!!region'
 PluginName = PLUGIN_METADATA['name']
 LogFilePath = os.path.join('logs', '{}.log'.format(PluginName))
-DimensionRegionFolder = {
-	-1: 'DIM-1/region/',
-	0: 'region/',
-	1: 'DIM1/region/'
-}
 HelpMessage = '''
 ------MCDR {1} v{2}------
 一个更新本服区域文件至生存服!!qb存档区域文件的插件
@@ -41,6 +50,7 @@ HelpMessage = '''
 §7{0} list §r列出待更新的区域文件
 §7{0} history §r输出上一次update的结果
 §7{0} update §r更新列表中的区域文件，这将重启服务器
+§7{0} reload §r重新载入配置文件
 §a【参数说明】§r
 §6[x] [z]§r: 区域文件坐标，如r.-3.1.mca的区域文件坐标为x=-3 z=1
 §6[d]§r: 维度序号，主世界为0，下界为-1，末地为1
@@ -60,7 +70,7 @@ class Region:
 		return 'r.{}.{}.mca'.format(self.x, self.z)
 
 	def to_file_path(self):
-		return os.path.join(DimensionRegionFolder[self.dim], self.to_file_name())
+		return os.path.join(config['dimension_region_folder'][str(self.dim)], self.to_file_name())
 
 	def __eq__(self, other):
 		if not isinstance(other, type(self)):
@@ -71,7 +81,8 @@ class Region:
 		return 'Region[x={}, z={}, dim={}]'.format(self.x, self.z, self.dim)
 
 
-def print_log(msg: str):
+def print_log(server: ServerInterface, msg: str):
+	server.logger.info(msg)
 	with open(LogFilePath, 'a') as logfile:
 		logfile.write(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ': ' + msg + '\n')
 
@@ -144,11 +155,11 @@ def region_update(source: CommandSource):
 	source.get_server().stop()
 	source.get_server().wait_for_start()
 
-	source.get_server().logger.info('{} 更新了 {} 个区域文件：'.format(source, len(regionList)))
+	print_log(source.get_server(), '{} 更新了 {} 个区域文件：'.format(source, len(regionList)))
 	historyList.clear()
 	for region in regionList:
-		source_dir = os.path.join(SourceWorldPath, region.to_file_path())
-		destination = os.path.join(DestinationWorldPath, region.to_file_path())
+		source_dir = os.path.join(config['source_world_directory'], region.to_file_path())
+		destination = os.path.join(config['destination_world_directory'], region.to_file_path())
 		try:
 			source.get_server().logger.info('- "{}" -> "{}"'.format(source_dir, destination))
 			shutil.copyfile(source_dir, destination)
@@ -159,9 +170,7 @@ def region_update(source: CommandSource):
 			msg = '成功'
 			flag = True
 		historyList.append((region, flag))
-		text = '  {}: {}'.format(region, msg)
-		source.get_server().logger.info(text)
-		print_log(text)
+		print_log(source.get_server(), '  {}: {}'.format(region, msg))
 
 	regionList.clear()
 	time.sleep(1)
@@ -169,7 +178,6 @@ def region_update(source: CommandSource):
 
 
 def on_load(server: ServerInterface, old):
-	server.register_help_message(Prefix, '从指定存档处更新region文件至本服')
 	try:
 		global historyList, regionList
 		historyList = old.historyList
@@ -177,12 +185,40 @@ def on_load(server: ServerInterface, old):
 	except AttributeError:
 		pass
 
+	load_config(server)
+	register_commands(server)
+	server.register_help_message(Prefix, '从指定存档处更新region文件至本服')
+
+
+def load_config(server: ServerInterface):
+	global config
+	config = DEFAULT_CONFIG.copy()
+	if os.path.isfile(CONFIG_FILE_PATH):
+		with open(CONFIG_FILE_PATH, 'r') as file:
+			try:
+				config.update(json.load(file))
+			except JSONDecodeError:
+				server.logger.warning('配置文件出错，使用默认配置文件')
+	else:
+		server.logger.info('未找到配置文件，已自动生成')
+	with open(CONFIG_FILE_PATH, 'w') as file:
+		json.dump(config, file, indent=2)
+
+
+def reload_config(source: CommandSource):
+	source.reply('重载配置文件中')
+	load_config(source.get_server())
+
+
+def register_commands(server: ServerInterface):
 	def get_region_parm_node(callback):
 		return Integer('x').then(Integer('z').then(Integer('dim').in_range(-1, 1).runs(callback)))
 
 	server.register_command(
 		Literal(Prefix).
 		runs(lambda src: src.reply(HelpMessage)).
+		requires(lambda: config['enabled']).
+		on_error(RequirementNotMet, lambda src: src.reply('{}未启用！请在配置文件中开启'.format(PLUGIN_METADATA['name'])), handled=True).
 		on_error(UnknownCommand, lambda src: src.reply('参数错误！请输入§7{}§r以获取插件帮助'.format(Prefix)), handled=True).
 		then(
 			Literal('add').runs(add_region_from_player).
@@ -195,5 +231,6 @@ def on_load(server: ServerInterface, old):
 		then(Literal('del-all').runs(clean_region_list)).
 		then(Literal('list').runs(show_region_list)).
 		then(Literal('history').runs(show_history)).
-		then(Literal('update').runs(region_update))
+		then(Literal('update').runs(region_update)).
+		then(Literal('reload').runs(reload_config))
 	)

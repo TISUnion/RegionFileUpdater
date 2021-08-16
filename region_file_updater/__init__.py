@@ -4,23 +4,11 @@ import os
 import shutil
 import time
 from json import JSONDecodeError
-from typing import List, Tuple, Callable, Any
+from typing import List, Tuple, Callable, Any, Optional
 
 from mcdreforged.api.all import *
 
-PLUGIN_METADATA = {
-	'id': 'region_file_updater',
-	'version': '1.4.0',
-	'name': 'Region file Updater',
-	'description': 'A MCDR plugin to help you update region files in game',
-	'author': 'Fallen_Breath',
-	'link': 'https://github.com/TISUnion/RegionFileUpdater',
-	'dependencies': {
-		'minecraft_data_api': '*',
-	}
-}
-
-
+PLUGIN_METADATA = ServerInterface.get_instance().as_plugin_server_interface().get_self_metadata()
 config = {
 	'enabled': True,
 	'source_world_directory': './qb_multi/slot1/world',
@@ -32,14 +20,14 @@ config = {
 	}
 }
 DEFAULT_CONFIG = config.copy()
-CONFIG_FILE_PATH = os.path.join('config', '{}.json'.format(PLUGIN_METADATA['id']))
+CONFIG_FILE_PATH = os.path.join('config', '{}.json'.format(PLUGIN_METADATA.id))
 
 Prefix = '!!region'
-PluginName = PLUGIN_METADATA['name']
+PluginName = PLUGIN_METADATA.name
 LogFilePath = os.path.join('logs', '{}.log'.format(PluginName))
 HelpMessage = '''
 ------MCDR {1} v{2}------
-一个更新本服区域文件至生存服!!qb存档区域文件的插件
+一个从指定位置拉取region文件至本服存档的插件，如生存服qb槽位->本服 
 §a【指令说明】§r
 §7{0} §r显示帮助信息
 §7{0} add §r添加玩家所在位置的区域文件
@@ -54,10 +42,11 @@ HelpMessage = '''
 §a【参数说明】§r
 §6[x] [z]§r: 区域文件坐标，如r.-3.1.mca的区域文件坐标为x=-3 z=1
 §6[d]§r: 维度序号，主世界为0，下界为-1，末地为1
-'''.strip().format(Prefix, PLUGIN_METADATA['name'], PLUGIN_METADATA['version'])
+'''.strip().format(Prefix, PLUGIN_METADATA.name, PLUGIN_METADATA.version)
 
 regionList = []  # type: List[Region]
 historyList = []  # type: List[Tuple[Region, bool]]
+server_inst: PluginServerInterface
 
 
 class Region:
@@ -115,7 +104,7 @@ def get_region_from_source(source: PlayerCommandSource) -> Region:
 	return Region(int(coord.x) // 512, int(coord.z) // 512, dim)
 
 
-@new_thread(PLUGIN_METADATA['name'])
+@new_thread(PLUGIN_METADATA.name)
 def add_region_from_player(source: CommandSource):
 	if isinstance(source, PlayerCommandSource):
 		add_region(source, get_region_from_source(source))
@@ -123,7 +112,7 @@ def add_region_from_player(source: CommandSource):
 		source.reply('该指令仅支持玩家执行')
 
 
-@new_thread(PLUGIN_METADATA['name'])
+@new_thread(PLUGIN_METADATA.name)
 def delete_region_from_player(source: CommandSource):
 	if isinstance(source, PlayerCommandSource):
 		delete_region(source, get_region_from_source(source))
@@ -144,7 +133,7 @@ def show_history(source: CommandSource):
 		source.reply('§6{}§r: {}'.format(region, msg[flag]))
 
 
-@new_thread(PLUGIN_METADATA['name'])
+@new_thread(PLUGIN_METADATA.name)
 def region_update(source: CommandSource):
 	show_region_list(source)
 	countdown = 5
@@ -178,7 +167,7 @@ def region_update(source: CommandSource):
 	source.get_server().start()
 
 
-def on_load(server: ServerInterface, old):
+def on_load(server: PluginServerInterface, old):
 	try:
 		global historyList, regionList
 		historyList = old.historyList
@@ -186,33 +175,24 @@ def on_load(server: ServerInterface, old):
 	except AttributeError:
 		pass
 
-	load_config(server.logger.info)
+	global server_inst
+	server_inst = server
+	load_config(None)
 	register_commands(server)
 	server.register_help_message(Prefix, '从指定存档处更新region文件至本服')
 
 
-def load_config(messenger: Callable[[str], Any]):
-	global config
-	config = DEFAULT_CONFIG.copy()
-	if os.path.isfile(CONFIG_FILE_PATH):
-		with open(CONFIG_FILE_PATH, 'r') as file:
-			try:
-				config.update(json.load(file))
-				messenger('配置文件加载成功')
-			except JSONDecodeError:
-				messenger('配置文件出错，使用默认配置文件')
-	else:
-		messenger('未找到配置文件，已自动生成')
-	with open(CONFIG_FILE_PATH, 'w') as file:
-		json.dump(config, file, indent=4)
+def load_config(source: Optional[CommandSource]):
+	global config, server_inst
+	config = server_inst.load_config_simple(CONFIG_FILE_PATH, DEFAULT_CONFIG, in_data_folder=False, source_to_reply=source, echo_in_console=False)
 
 
 def reload_config(source: CommandSource):
 	source.reply('重载配置文件中')
-	load_config(source.reply)
+	load_config(source)
 
 
-def register_commands(server: ServerInterface):
+def register_commands(server: PluginServerInterface):
 	def get_region_parm_node(callback):
 		return Integer('x').then(Integer('z').then(Integer('dim').in_range(-1, 1).runs(callback)))
 
@@ -234,7 +214,7 @@ def register_commands(server: ServerInterface):
 		then(
 			Literal('update').
 			requires(lambda: config['enabled']).
-			on_error(RequirementNotMet, lambda src: src.reply('{}未启用！请在配置文件中开启'.format(PLUGIN_METADATA['name'])), handled=True).
+			on_error(RequirementNotMet, lambda src: src.reply('{}未启用！请在配置文件中开启'.format(PLUGIN_METADATA.name)), handled=True).
 			runs(region_update)
 		).
 		then(Literal('reload').runs(reload_config))

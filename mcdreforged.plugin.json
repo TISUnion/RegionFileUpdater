@@ -1,12 +1,15 @@
 {
 	"id": "region_file_updater",
-	"version": "1.4.1",
+	"version": "1.4.2",
 	"name": "Region file Updater",
 	"description": {
 		"en_us": "A MCDR plugin to help you update region files in game",
 		"zh_cn": "一个从指定位置拉取region文件至本服存档的插件"
 	},
-	"author": "Fallen_Breath",
+	"author": [
+		"Fallen_Breath",
+		"YehowahLiu"
+	],
 	"link": "https://github.com/TISUnion/RegionFileUpdater",
 	"dependencies": {
 		"minecraft_data_api": "*"

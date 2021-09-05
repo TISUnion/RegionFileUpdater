@@ -53,7 +53,6 @@ For 1.17+, the entities data was saved in an specified folder outside region fol
 You can modify the config `dimension_region_folder` to make entities sync during region update
 
 ```json5
-# config/region_file_updater.json
 {
     "enabled": true,
     "source_world_directory": "./qb_multi/slot1/world",

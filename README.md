@@ -40,7 +40,7 @@ A MCDR plugin to help you update region files in game
 
 # 例子 / Sample
 
-`!!region add 0 3 2` 添加主世界的r.3.2.mca至更新列表 / add overworld 's r.3.2.mca to the updating list
+`!!region add 0 3 2` 添加主世界的r.3.2.mca至更新列表 / add overworld's r.3.2.mca to the updating list
 
 # 配置 / Config
 

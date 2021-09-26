@@ -1,27 +1,26 @@
 # -*- coding: utf-8 -*-
-import json
 import os
 import shutil
 import time
-from json import JSONDecodeError
-from typing import List, Tuple, Callable, Any, Optional
+from typing import Dict, Iterable, List, Tuple, Optional, Union
 
 from mcdreforged.api.all import *
 
 PLUGIN_METADATA = ServerInterface.get_instance().as_plugin_server_interface().get_self_metadata()
-config = {
-	'enabled': True,
-	'source_world_directory': './qb_multi/slot1/world',
-	'destination_world_directory':  './server/world',
-	'dimension_region_folder':  {
+
+
+class Config(Serializable):
+	enabled: bool = True,
+	source_world_directory: str = './qb_multi/slot1/world'
+	destination_world_directory: str = './server/world'
+	dimension_region_folder: Dict[str, Union[str, List[str]]] = {
 		'-1': 'DIM-1/region',
 		'0': 'region',
 		'1': 'DIM1/region'
 	}
-}
-DEFAULT_CONFIG = config.copy()
-CONFIG_FILE_PATH = os.path.join('config', '{}.json'.format(PLUGIN_METADATA.id))
 
+
+config: Optional[Config] = None
 Prefix = '!!region'
 PluginName = PLUGIN_METADATA.name
 LogFilePath = os.path.join('logs', '{}.log'.format(PluginName))
@@ -58,8 +57,17 @@ class Region:
 	def to_file_name(self):
 		return 'r.{}.{}.mca'.format(self.x, self.z)
 
-	def to_file_path(self):
-		return os.path.join(config['dimension_region_folder'][str(self.dim)], self.to_file_name())
+	def to_file_list(self):
+		file_list = []
+		folders = config.dimension_region_folder[str(self.dim)]
+		if isinstance(folders, str):
+			file_list.append(os.path.join(folders, self.to_file_name()))
+		elif isinstance(folders, Iterable):
+			for folder in folders:
+				file_list.append(os.path.join(folder, self.to_file_name()))
+		else:
+			pass
+		return file_list
 
 	def __eq__(self, other):
 		if not isinstance(other, type(self)):
@@ -148,19 +156,20 @@ def region_update(source: CommandSource):
 	print_log(source.get_server(), '{} 更新了 {} 个区域文件：'.format(source, len(regionList)))
 	historyList.clear()
 	for region in regionList:
-		source_dir = os.path.join(config['source_world_directory'], region.to_file_path())
-		destination = os.path.join(config['destination_world_directory'], region.to_file_path())
-		try:
-			source.get_server().logger.info('- "{}" -> "{}"'.format(source_dir, destination))
-			shutil.copyfile(source_dir, destination)
-		except Exception as e:
-			msg = '失败，错误信息：{}'.format(str(e))
-			flag = False
-		else:
-			msg = '成功'
-			flag = True
-		historyList.append((region, flag))
-		print_log(source.get_server(), '  {}: {}'.format(region, msg))
+		for region_file in region.to_file_list():
+			source_dir = os.path.join(config.source_world_directory, region_file)
+			destination = os.path.join(config.destination_world_directory, region_file)
+			try:
+				source.get_server().logger.info('- "{}" -> "{}"'.format(source_dir, destination))
+				shutil.copyfile(source_dir, destination)
+			except Exception as e:
+				msg = '失败，错误信息：{}'.format(str(e))
+				flag = False
+			else:
+				msg = '成功'
+				flag = True
+			historyList.append((region, flag))
+			print_log(source.get_server(), '  {}: {}'.format(region, msg))
 
 	regionList.clear()
 	time.sleep(1)
@@ -184,7 +193,8 @@ def on_load(server: PluginServerInterface, old):
 
 def load_config(source: Optional[CommandSource]):
 	global config, server_inst
-	config = server_inst.load_config_simple(CONFIG_FILE_PATH, DEFAULT_CONFIG, in_data_folder=False, source_to_reply=source, echo_in_console=False)
+	config_file_path = os.path.join('config', '{}.json'.format(PLUGIN_METADATA.id))
+	config = server_inst.load_config_simple(config_file_path, in_data_folder=False, source_to_reply=source, echo_in_console=False, target_class=Config)
 
 
 def reload_config(source: CommandSource):
@@ -213,7 +223,7 @@ def register_commands(server: PluginServerInterface):
 		then(Literal('history').runs(show_history)).
 		then(
 			Literal('update').
-			requires(lambda: config['enabled']).
+			requires(lambda: config.enabled).
 			on_error(RequirementNotMet, lambda src: src.reply('{}未启用！请在配置文件中开启'.format(PLUGIN_METADATA.name)), handled=True).
 			runs(region_update)
 		).

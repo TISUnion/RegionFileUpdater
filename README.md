@@ -28,7 +28,7 @@ A MCDR plugin to help you update region files in game
 
 `!!region list` 列出待更新的区域文件 / list all added region files
 
-`!!region history` 输出上一次update的结果 / print the result of the lastest update
+`!!region history` 输出上一次update的结果 / print the result of the latest update
 
 `!!region update` 更新列表中的区域文件，这将重启服务器 / update all selected region files, which will restart the server
 
@@ -41,4 +41,27 @@ A MCDR plugin to help you update region files in game
 # 例子 / Sample
 
 `!!region add 0 3 2` 添加主世界的r.3.2.mca至更新列表 / add overworld's r.3.2.mca to the updating list
+
+# 配置 / Config
+
+1.17+ 的存档中, 实体相关数据被单独存储到之前的区块数据之外
+
+可以修改配置项 `dimension_region_folder` 如下, 来让实体数据在更新时也进行同步
+
+For 1.17+, the entities data was saved in an specified folder outside region folder.
+
+You can modify the config `dimension_region_folder` to make entities sync during region update
+
+```json5
+{
+    "enabled": true,
+    "source_world_directory": "./qb_multi/slot1/world",
+    "destination_world_directory": "./server/world",
+    "dimension_region_folder": {
+        "-1": ["DIM-1/region", "DIM-1/entities"],
+        "0": ["region", "entities"],
+        "1": ["DIM1/region", "DIM1/entities"]
+    }
+}
+```
 

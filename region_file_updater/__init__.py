@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 import shutil
 import time
@@ -10,7 +9,7 @@ PLUGIN_METADATA = ServerInterface.get_instance().as_plugin_server_interface().ge
 
 
 class Config(Serializable):
-	enabled: bool = True,
+	enabled: bool = True
 	source_world_directory: str = './qb_multi/slot1/world'
 	destination_world_directory: str = './server/world'
 	dimension_region_folder: Dict[str, Union[str, List[str]]] = {

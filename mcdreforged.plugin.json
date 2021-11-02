@@ -1,6 +1,6 @@
 {
 	"id": "region_file_updater",
-	"version": "1.5.0",
+	"version": "1.5.1",
 	"name": "Region file Updater",
 	"description": {
 		"en_us": "A MCDR plugin to help you update region files in game",

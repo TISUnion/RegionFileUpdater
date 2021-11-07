@@ -233,9 +233,10 @@ def region_update(source: CommandSource):
 
 def on_load(server: PluginServerInterface, old):
 	try:
-		global historyList, regionList
+		global historyList, regionList, protectedRegionList
 		historyList = old.historyList
 		regionList = old.regionList
+		protectedRegionList = old.protectedRegionList
 	except AttributeError:
 		pass
 

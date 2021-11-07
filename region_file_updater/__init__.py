@@ -34,6 +34,8 @@ HelpMessage = '''
 §7{0} del §r删除玩家所在位置的区域文件
 §7{0} del §6[d] [x] [z] [d] §r删除指定的区域文件
 §7{0} del-all §r删除所有区域文件
+§7{0} protect §r将玩家所在位置的区域文件设为保护状态
+§7{0} deprotect §r取消保护玩家所在位置的区域文件
 §7{0} list §r列出待更新的区域文件
 §7{0} history §r输出上一次update的结果
 §7{0} update §r更新列表中的区域文件，这将重启服务器
@@ -44,6 +46,7 @@ HelpMessage = '''
 '''.strip().format(Prefix, PLUGIN_METADATA.name, PLUGIN_METADATA.version)
 
 regionList = []  # type: List[Region]
+protectedRegionList = [] # type: List[Region]
 historyList = []  # type: List[Tuple[Region, bool]]
 server_inst: PluginServerInterface
 
@@ -87,10 +90,11 @@ def print_log(server: ServerInterface, msg: str):
 def add_region(source: CommandSource, region: Region):
 	if region in regionList:
 		source.reply('列表中已存在该区域文件')
-	else:
+	elif region not in protectedRegionList:
 		regionList.append(region)
 		source.reply('区域文件§6{}§r已添加'.format(region))
-
+	else:
+		source.reply('该区域已设保护')
 
 def delete_region(source: CommandSource, region: Region):
 	if region not in regionList:
@@ -104,6 +108,25 @@ def clean_region_list(source):
 	regionList.clear()
 	source.reply('区域文件列表已清空')
 
+
+def protect_region(source: CommandSource, region: Region):
+	if region in protectedRegionList:
+		source.reply('该区域文件已设保护')
+	if region in regionList:
+		regionList.remove(region)
+		protectedRegionList.append(region)
+		source.reply('区域文件§6{}§r已从列表移除并设保护'.format(region))
+	else:
+		protectedRegionList.append(region)
+		source.reply('区域文件§6{}§r已设保护'.format(region))
+
+
+def deprotect_region(source: CommandSource, region: Region):
+	if region in protectedRegionList:
+		protectedRegionList.remove(region)
+		source.reply('区域文件§6{}§r已取消保护'.format(region))
+	else:
+		source.reply('该区域文件未被保护')
 
 def get_region_from_source(source: PlayerCommandSource) -> Region:
 	api = source.get_server().get_plugin_instance('minecraft_data_api')
@@ -127,6 +150,19 @@ def delete_region_from_player(source: CommandSource):
 	else:
 		source.reply('该指令仅支持玩家执行')
 
+@new_thread(PLUGIN_METADATA.name)
+def protect_region_from_player(source: CommandSource):
+	if isinstance(source, PlayerCommandSource):
+		protect_region(source, get_region_from_source(source))
+	else:
+		source.reply('该指令仅支持玩家执行')
+
+@new_thread(PLUGIN_METADATA.name)
+def deprotect_region_from_player(source: CommandSource):
+	if isinstance(source, PlayerCommandSource):
+		deprotect_region(source, get_region_from_source(source))
+	else:
+		source.reply('该指令仅支持玩家执行')
 
 def show_region_list(source: CommandSource):
 	source.reply('更新列表中共有{}个待更新的区域文件'.format(len(regionList)))
@@ -219,6 +255,12 @@ def register_commands(server: PluginServerInterface):
 			then(get_region_parm_node(lambda src, ctx: delete_region(src, Region(ctx['x'], ctx['z'], ctx['dim']))))
 		).
 		then(Literal('del-all').runs(clean_region_list)).
+		then(
+			Literal('protect').runs(protect_region_from_player).
+			then(get_region_parm_node(lambda src, ctx: protect_region(src, Region(ctx['x'], ctx['z'], ctx['dim']))))).
+		then(
+			Literal('deprotect').runs(deprotect_region_from_player).
+			then(get_region_parm_node(lambda src, ctx: deprotect_region(src, Region(ctx['x'], ctx['z'], ctx['dim']))))).
 		then(Literal('list').runs(show_region_list)).
 		then(Literal('history').runs(show_history)).
 		then(

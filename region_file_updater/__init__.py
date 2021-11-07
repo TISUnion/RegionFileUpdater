@@ -35,8 +35,12 @@ HelpMessage = '''
 §7{0} del §6[d] [x] [z] [d] §r删除指定的区域文件
 §7{0} del-all §r删除所有区域文件
 §7{0} protect §r将玩家所在位置的区域文件设为保护状态
+§7{0} protect §6[x] [z] [d] §r保护指定的区域文件
 §7{0} deprotect §r取消保护玩家所在位置的区域文件
+§7{0} deprotect §6[x] [z] [d] §r取消保护指定的区域文件
+§7{0} deprotect-all §r取消保护所有的区域文件
 §7{0} list §r列出待更新的区域文件
+§7{0} list-protect §r列出受保护的区域文件
 §7{0} history §r输出上一次update的结果
 §7{0} update §r更新列表中的区域文件，这将重启服务器
 §7{0} reload §r重新载入配置文件
@@ -112,7 +116,7 @@ def clean_region_list(source):
 def protect_region(source: CommandSource, region: Region):
 	if region in protectedRegionList:
 		source.reply('该区域文件已设保护')
-	if region in regionList:
+	elif region in regionList:
 		regionList.remove(region)
 		protectedRegionList.append(region)
 		source.reply('区域文件§6{}§r已从列表移除并设保护'.format(region))
@@ -127,6 +131,12 @@ def deprotect_region(source: CommandSource, region: Region):
 		source.reply('区域文件§6{}§r已取消保护'.format(region))
 	else:
 		source.reply('该区域文件未被保护')
+
+
+def deprotect_all_regions(source):
+	protectedRegionList.clear()
+	source.reply('所有受保护区域文件已去保护')
+
 
 def get_region_from_source(source: PlayerCommandSource) -> Region:
 	api = source.get_server().get_plugin_instance('minecraft_data_api')
@@ -150,6 +160,7 @@ def delete_region_from_player(source: CommandSource):
 	else:
 		source.reply('该指令仅支持玩家执行')
 
+
 @new_thread(PLUGIN_METADATA.name)
 def protect_region_from_player(source: CommandSource):
 	if isinstance(source, PlayerCommandSource):
@@ -157,12 +168,14 @@ def protect_region_from_player(source: CommandSource):
 	else:
 		source.reply('该指令仅支持玩家执行')
 
+
 @new_thread(PLUGIN_METADATA.name)
 def deprotect_region_from_player(source: CommandSource):
 	if isinstance(source, PlayerCommandSource):
 		deprotect_region(source, get_region_from_source(source))
 	else:
 		source.reply('该指令仅支持玩家执行')
+
 
 def show_region_list(source: CommandSource):
 	source.reply('更新列表中共有{}个待更新的区域文件'.format(len(regionList)))
@@ -175,6 +188,12 @@ def show_history(source: CommandSource):
 	msg = {False: '失败', True: '成功'}
 	for region, flag in historyList:
 		source.reply('§6{}§r: {}'.format(region, msg[flag]))
+
+
+def show_protected_regions(source: CommandSource):
+	source.reply('已保护区域列表中共有{}个受保护的区域文件'.format(len(protectedRegionList)))
+	for region in protectedRegionList:
+		source.reply('- §6{}§r'.format(region))
 
 
 @new_thread(PLUGIN_METADATA.name)
@@ -261,7 +280,9 @@ def register_commands(server: PluginServerInterface):
 		then(
 			Literal('deprotect').runs(deprotect_region_from_player).
 			then(get_region_parm_node(lambda src, ctx: deprotect_region(src, Region(ctx['x'], ctx['z'], ctx['dim']))))).
+		then(Literal('deprotect-all').runs(deprotect_all_regions)).
 		then(Literal('list').runs(show_region_list)).
+		then(Literal('list-protect').runs(show_protected_regions)).
 		then(Literal('history').runs(show_history)).
 		then(
 			Literal('update').

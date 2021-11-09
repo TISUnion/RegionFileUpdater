@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import json
 import os
 import shutil
@@ -10,7 +9,7 @@ from mcdreforged.api.all import *
 PLUGIN_METADATA = ServerInterface.get_instance().as_plugin_server_interface().get_self_metadata()
 
 class Config(Serializable):
-	enabled: bool = True,
+	enabled: bool = True
 	source_world_directory: str = './qb_multi/slot1/world'
 	destination_world_directory: str = './server/world'
 	protected_region_file_name = 'protected-regions.json'

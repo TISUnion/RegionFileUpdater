@@ -26,7 +26,19 @@ A MCDR plugin to help you update region files in game
 
 `!!region delete-all` 删除所有区域文件 / delete all region files
 
+`!!region protect` 将玩家所在位置的区域文件设为保护状态 / protect the region file where the player is in
+
+`!!region protect` 保护指定的区域文件 / protect a specific region file
+
+`!!region deprotect` 取消保护玩家所在位置的区域文件 / deprotect the region file where the player is in
+
+`!!region deprotect` 取消保护指定的区域文件 / deprotect a specific region file
+
+`!!region deprotect-all` 取消保护所有的区域文件 / deprotect all region files
+
 `!!region list` 列出待更新的区域文件 / list all added region files
+
+`!!region list-protect` 列出受保护的区域文件 / list all protected region files
 
 `!!region history` 输出上一次update的结果 / print the result of the latest update
 

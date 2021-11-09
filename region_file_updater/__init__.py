@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import time
@@ -7,11 +8,11 @@ from mcdreforged.api.all import *
 
 PLUGIN_METADATA = ServerInterface.get_instance().as_plugin_server_interface().get_self_metadata()
 
-
 class Config(Serializable):
 	enabled: bool = True
 	source_world_directory: str = './qb_multi/slot1/world'
 	destination_world_directory: str = './server/world'
+	protected_region_file_name = 'protected-regions.json'
 	dimension_region_folder: Dict[str, Union[str, List[str]]] = {
 		'-1': 'DIM-1/region',
 		'0': 'region',
@@ -33,7 +34,13 @@ HelpMessage = '''
 §7{0} del §r删除玩家所在位置的区域文件
 §7{0} del §6[d] [x] [z] [d] §r删除指定的区域文件
 §7{0} del-all §r删除所有区域文件
+§7{0} protect §r将玩家所在位置的区域文件设为保护状态
+§7{0} protect §6[x] [z] [d] §r保护指定的区域文件
+§7{0} deprotect §r取消保护玩家所在位置的区域文件
+§7{0} deprotect §6[x] [z] [d] §r取消保护指定的区域文件
+§7{0} deprotect-all §r取消保护所有的区域文件
 §7{0} list §r列出待更新的区域文件
+§7{0} list-protect §r列出受保护的区域文件
 §7{0} history §r输出上一次update的结果
 §7{0} update §r更新列表中的区域文件，这将重启服务器
 §7{0} reload §r重新载入配置文件
@@ -43,11 +50,12 @@ HelpMessage = '''
 '''.strip().format(Prefix, PLUGIN_METADATA.name, PLUGIN_METADATA.version)
 
 regionList = []  # type: List[Region]
+protectedRegionList = []  # type: List[Region]
 historyList = []  # type: List[Tuple[Region, bool]]
 server_inst: PluginServerInterface
 
 
-class Region:
+class Region(Serializable):
 	def __init__(self, x: int, z: int, dim: int):
 		self.x = x
 		self.z = z
@@ -80,15 +88,18 @@ class Region:
 def print_log(server: ServerInterface, msg: str):
 	server.logger.info(msg)
 	with open(LogFilePath, 'a') as logfile:
-		logfile.write(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ': ' + msg + '\n')
+		logfile.write(time.strftime('%Y-%m-%d %H:%M:%S',
+									time.localtime(time.time())) + ': ' + msg + '\n')
 
 
 def add_region(source: CommandSource, region: Region):
 	if region in regionList:
 		source.reply('列表中已存在该区域文件')
-	else:
+	elif region not in protectedRegionList:
 		regionList.append(region)
 		source.reply('区域文件§6{}§r已添加'.format(region))
+	else:
+		source.reply('该区域已设保护')
 
 
 def delete_region(source: CommandSource, region: Region):
@@ -102,6 +113,61 @@ def delete_region(source: CommandSource, region: Region):
 def clean_region_list(source):
 	regionList.clear()
 	source.reply('区域文件列表已清空')
+
+
+def protect_region(source: CommandSource, region: Region):
+	if region in protectedRegionList:
+		source.reply('该区域文件已设保护')
+	elif region in regionList:
+		regionList.remove(region)
+		protectedRegionList.append(region)
+		source.reply('区域文件§6{}§r已从列表移除并设保护'.format(region))
+		save_protected_region_file()
+	else:
+		protectedRegionList.append(region)
+		source.reply('区域文件§6{}§r已设保护'.format(region))
+		save_protected_region_file()
+
+
+def deprotect_region(source: CommandSource, region: Region):
+	if region in protectedRegionList:
+		protectedRegionList.remove(region)
+		source.reply('区域文件§6{}§r已取消保护'.format(region))
+		save_protected_region_file()
+	else:
+		source.reply('该区域文件未被保护')
+
+
+def deprotect_all_regions(source):
+	protectedRegionList.clear()
+	source.reply('所有受保护区域文件已去保护')
+	save_protected_region_file()
+
+
+def save_protected_region_file():
+	file_path = os.path.join(
+		config.destination_world_directory, config.protected_region_file_name)
+	with open(file_path, 'w', encoding='utf8') as file:
+		json.dump(serialize(protectedRegionList), file)
+
+
+def load_protected_region_file():
+	global protectedRegionList
+	file_path = os.path.join(
+		config.destination_world_directory, config.protected_region_file_name)
+	if os.path.isfile(file_path):
+		with open(file_path, 'r', encoding='utf8') as file:
+			try:
+				protected_list_data = json.load(file)
+			except Exception as e:
+				server_inst.logger.error(
+					'Fail to load protected regions from {}: {}'.format(file_path, e))
+				protectedRegionList = []
+				save_protected_region_file()
+			else:
+				for r in protected_list_data:
+					protectedRegionList.append(
+						Region(r['x'], r['z'], r['dim']))
 
 
 def get_region_from_source(source: PlayerCommandSource) -> Region:
@@ -127,6 +193,22 @@ def delete_region_from_player(source: CommandSource):
 		source.reply('该指令仅支持玩家执行')
 
 
+@new_thread(PLUGIN_METADATA.name)
+def protect_region_from_player(source: CommandSource):
+	if isinstance(source, PlayerCommandSource):
+		protect_region(source, get_region_from_source(source))
+	else:
+		source.reply('该指令仅支持玩家执行')
+
+
+@new_thread(PLUGIN_METADATA.name)
+def deprotect_region_from_player(source: CommandSource):
+	if isinstance(source, PlayerCommandSource):
+		deprotect_region(source, get_region_from_source(source))
+	else:
+		source.reply('该指令仅支持玩家执行')
+
+
 def show_region_list(source: CommandSource):
 	source.reply('更新列表中共有{}个待更新的区域文件'.format(len(regionList)))
 	for region in regionList:
@@ -140,24 +222,35 @@ def show_history(source: CommandSource):
 		source.reply('§6{}§r: {}'.format(region, msg[flag]))
 
 
+def show_protected_regions(source: CommandSource):
+	source.reply('已保护区域列表中共有{}个受保护的区域文件'.format(len(protectedRegionList)))
+	for region in protectedRegionList:
+		source.reply('- §6{}§r'.format(region))
+
+
 @new_thread(PLUGIN_METADATA.name)
 def region_update(source: CommandSource):
 	show_region_list(source)
 	countdown = 5
-	source.reply('[{}]: {}秒后重启服务器更新列表中的区域文件'.format(PluginName, countdown), isBroadcast=True)
+	source.reply('[{}]: {}秒后重启服务器更新列表中的区域文件'.format(
+		PluginName, countdown), isBroadcast=True)
 	for i in range(1, countdown):
-		source.reply('[{}]: 还有{}秒'.format(PluginName, countdown - i), isBroadcast=True)
+		source.reply('[{}]: 还有{}秒'.format(
+			PluginName, countdown - i), isBroadcast=True)
 		time.sleep(1)
 
 	source.get_server().stop()
 	source.get_server().wait_for_start()
 
-	print_log(source.get_server(), '{} 更新了 {} 个区域文件：'.format(source, len(regionList)))
+	print_log(source.get_server(), '{} 更新了 {} 个区域文件：'.format(
+		source, len(regionList)))
 	historyList.clear()
 	for region in regionList:
 		for region_file in region.to_file_list():
-			source_dir = os.path.join(config.source_world_directory, region_file)
-			destination = os.path.join(config.destination_world_directory, region_file)
+			source_dir = os.path.join(
+				config.source_world_directory, region_file)
+			destination = os.path.join(
+				config.destination_world_directory, region_file)
 			try:
 				source.get_server().logger.info('- "{}" -> "{}"'.format(source_dir, destination))
 				shutil.copyfile(source_dir, destination)
@@ -177,7 +270,7 @@ def region_update(source: CommandSource):
 
 def on_load(server: PluginServerInterface, old):
 	try:
-		global historyList, regionList
+		global historyList, regionList, protectedRegionList
 		historyList = old.historyList
 		regionList = old.regionList
 	except AttributeError:
@@ -186,14 +279,17 @@ def on_load(server: PluginServerInterface, old):
 	global server_inst
 	server_inst = server
 	load_config(None)
+	load_protected_region_file()
 	register_commands(server)
 	server.register_help_message(Prefix, '从指定存档处更新region文件至本服')
 
 
 def load_config(source: Optional[CommandSource]):
 	global config, server_inst
-	config_file_path = os.path.join('config', '{}.json'.format(PLUGIN_METADATA.id))
-	config = server_inst.load_config_simple(config_file_path, in_data_folder=False, source_to_reply=source, echo_in_console=False, target_class=Config)
+	config_file_path = os.path.join(
+		'config', '{}.json'.format(PLUGIN_METADATA.id))
+	config = server_inst.load_config_simple(
+		config_file_path, in_data_folder=False, source_to_reply=source, echo_in_console=False, target_class=Config)
 
 
 def reload_config(source: CommandSource):
@@ -211,14 +307,24 @@ def register_commands(server: PluginServerInterface):
 		on_error(UnknownArgument, lambda src: src.reply('参数错误！请输入§7{}§r以获取插件帮助'.format(Prefix)), handled=True).
 		then(
 			Literal('add').runs(add_region_from_player).
-			then(get_region_parm_node(lambda src, ctx: add_region(src, Region(ctx['x'], ctx['z'], ctx['dim']))))
+			then(get_region_parm_node(lambda src, ctx: add_region(
+				src, Region(ctx['x'], ctx['z'], ctx['dim']))))
 		).
 		then(
 			Literal('del').runs(delete_region_from_player).
-			then(get_region_parm_node(lambda src, ctx: delete_region(src, Region(ctx['x'], ctx['z'], ctx['dim']))))
+			then(get_region_parm_node(lambda src, ctx: delete_region(
+				src, Region(ctx['x'], ctx['z'], ctx['dim']))))
 		).
 		then(Literal('del-all').runs(clean_region_list)).
+		then(
+			Literal('protect').runs(protect_region_from_player).
+			then(get_region_parm_node(lambda src, ctx: protect_region(src, Region(ctx['x'], ctx['z'], ctx['dim']))))).
+		then(
+			Literal('deprotect').runs(deprotect_region_from_player).
+			then(get_region_parm_node(lambda src, ctx: deprotect_region(src, Region(ctx['x'], ctx['z'], ctx['dim']))))).
+		then(Literal('deprotect-all').runs(deprotect_all_regions)).
 		then(Literal('list').runs(show_region_list)).
+		then(Literal('list-protect').runs(show_protected_regions)).
 		then(Literal('history').runs(show_history)).
 		then(
 			Literal('update').

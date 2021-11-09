@@ -160,13 +160,14 @@ def load_protected_region_file():
 	if os.path.isfile(file_path):
 		with open(file_path, 'r', encoding='utf8') as file:
 			try:
-				data = json.load(file)
-				protectedRegionList = deserialize(data, List[Region])
+				protected_list_data = json.load(file)
 			except Exception as e:
 				server_inst.logger.error(
 					'Fail to load protected regions from {}: {}'.format(file_path, e))
 				protectedRegionList = []
-
+			else:
+				for r in protected_list_data:
+					protectedRegionList.append(Region(r['x'], r['z'], r['dim']))
 
 def get_region_from_source(source: PlayerCommandSource) -> Region:
 	api = source.get_server().get_plugin_instance('minecraft_data_api')
@@ -271,13 +272,13 @@ def on_load(server: PluginServerInterface, old):
 		global historyList, regionList, protectedRegionList
 		historyList = old.historyList
 		regionList = old.regionList
-		protectedRegionList = old.protectedRegionList
 	except AttributeError:
 		pass
 
 	global server_inst
 	server_inst = server
 	load_config(None)
+	load_protected_region_file()
 	register_commands(server)
 	server.register_help_message(Prefix, '从指定存档处更新region文件至本服')
 

@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
+import json
 import os
 import shutil
 import time
-import json
 from typing import Dict, Iterable, List, Tuple, Optional, Union
 
 from mcdreforged.api.all import *
 
 PLUGIN_METADATA = ServerInterface.get_instance().as_plugin_server_interface().get_self_metadata()
-PROTECTED_REGION_FILE_NAME = 'protected-regions.json'
-
 
 class Config(Serializable):
 	enabled: bool = True,
 	source_world_directory: str = './qb_multi/slot1/world'
 	destination_world_directory: str = './server/world'
+	protected_region_file_name = 'protected-regions.json'
 	dimension_region_folder: Dict[str, Union[str, List[str]]] = {
 		'-1': 'DIM-1/region',
 		'0': 'region',
@@ -148,7 +147,7 @@ def deprotect_all_regions(source):
 
 def save_protected_region_file():
 	file_path = os.path.join(
-		config.destination_world_directory, PROTECTED_REGION_FILE_NAME)
+		config.destination_world_directory, config.protected_region_file_name)
 	with open(file_path, 'w', encoding='utf8') as file:
 		json.dump(serialize(protectedRegionList), file)
 
@@ -156,7 +155,7 @@ def save_protected_region_file():
 def load_protected_region_file():
 	global protectedRegionList
 	file_path = os.path.join(
-		config.destination_world_directory, PROTECTED_REGION_FILE_NAME)
+		config.destination_world_directory, config.protected_region_file_name)
 	if os.path.isfile(file_path):
 		with open(file_path, 'r', encoding='utf8') as file:
 			try:
@@ -165,9 +164,12 @@ def load_protected_region_file():
 				server_inst.logger.error(
 					'Fail to load protected regions from {}: {}'.format(file_path, e))
 				protectedRegionList = []
+				save_protected_region_file()
 			else:
 				for r in protected_list_data:
-					protectedRegionList.append(Region(r['x'], r['z'], r['dim']))
+					protectedRegionList.append(
+						Region(r['x'], r['z'], r['dim']))
+
 
 def get_region_from_source(source: PlayerCommandSource) -> Region:
 	api = source.get_server().get_plugin_instance('minecraft_data_api')

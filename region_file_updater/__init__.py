@@ -13,9 +13,9 @@ class Config(Serializable):
 	source_world_directory: str = './qb_multi/slot1/world'
 	destination_world_directory: str = './server/world'
 	dimension_region_folder: Dict[str, Union[str, List[str]]] = {
-		'-1': 'DIM-1/region',
-		'0': 'region',
-		'1': 'DIM1/region'
+		'-1': ['DIM-1/region', 'DIM-1/poi'],
+		'0': ['region', 'poi'],
+		'1': ['DIM1/region', 'DIM1/poi']
 	}
 
 
@@ -164,6 +164,9 @@ def region_update(source: CommandSource):
 			except Exception as e:
 				msg = '失败，错误信息：{}'.format(str(e))
 				flag = False
+				if str(e)[10:35] == 'No such file or directory' and region_file.split('\\')[0] == 'poi' and os.path.exists(destination):
+					os.remove(destination)
+					source.get_server().logger.info('poi 删除成功: {}'.format(destination))
 			else:
 				msg = '成功'
 				flag = True

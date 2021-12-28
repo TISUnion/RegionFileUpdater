@@ -77,12 +77,6 @@ class Region:
 		return 'Region[x={}, z={}, dim={}]'.format(self.x, self.z, self.dim)
 
 
-def print_log(server: ServerInterface, msg: str):
-	server.logger.info(msg)
-	with open(LogFilePath, 'a') as logfile:
-		logfile.write(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ': ' + msg + '\n')
-
-
 def add_region(source: CommandSource, region: Region):
 	if region in regionList:
 		source.reply('列表中已存在该区域文件')
@@ -152,7 +146,7 @@ def region_update(source: CommandSource):
 	source.get_server().stop()
 	source.get_server().wait_for_start()
 
-	print_log(source.get_server(), '{} 更新了 {} 个区域文件：'.format(source, len(regionList)))
+	source.get_server().logger.info('{} 更新了 {} 个区域文件：'.format(source, len(regionList)))
 	historyList.clear()
 	for region in regionList:
 		for region_file in region.to_file_list():
@@ -171,7 +165,7 @@ def region_update(source: CommandSource):
 				msg = '成功'
 				flag = True
 			historyList.append((region, flag))
-			print_log(source.get_server(), '  {}: {}'.format(region, msg))
+			source.get_server().logger.info('  {}: {}'.format(region, msg))
 
 	regionList.clear()
 	time.sleep(1)

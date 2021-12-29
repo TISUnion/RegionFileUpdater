@@ -167,9 +167,9 @@ def region_update(source: CommandSource):
 			except Exception as e:
 				msg = '失败，错误信息：{}'.format(str(e))
 				flag = False
-				if str(e)[10:35] == 'No such file or directory' and region_file.split('\\')[0] == 'poi' and os.path.exists(destination):
+				if isinstance(e, FileNotFoundError) and os.path.exists(destination):
 					os.remove(destination)
-					source.get_server().logger.info('poi 删除成功: {}'.format(destination))
+					source.get_server().logger.info('在目的地被删除的文件: {}'.format(destination))
 			else:
 				msg = '成功'
 				flag = True

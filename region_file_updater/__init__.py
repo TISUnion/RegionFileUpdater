@@ -154,7 +154,7 @@ def region_update(source: CommandSource):
 
 	source.get_server().stop()
 	source.get_server().wait_for_start()
-	
+
 	print_log(source.get_server(), '{} 更新了 {} 个区域文件：'.format(source, len(regionList)))
 	historyList.clear()
 	for region in regionList:

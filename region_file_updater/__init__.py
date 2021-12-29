@@ -79,11 +79,11 @@ class Region:
 
 def print_log(server: ServerInterface, msg: str):
 	server.logger.info(msg)
-	with open(LogFilePath, 'a') as logfile:
-		try:
+	try:
+		with open(LogFilePath, 'a') as logfile:
 			logfile.write(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ': ' + msg + '\n')
-		except Exception as e:
-			server.logger.info('错误写入日志文件: {}'.format(e))
+	except Exception as e:
+		server.logger.info('错误写入日志文件: {}'.format(e))
 
 
 def add_region(source: CommandSource, region: Region):

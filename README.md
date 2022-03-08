@@ -58,9 +58,9 @@ You can modify the config `dimension_region_folder` to make entities sync during
     "source_world_directory": "./qb_multi/slot1/world",
     "destination_world_directory": "./server/world",
     "dimension_region_folder": {
-        "-1": ["DIM-1/region", "DIM-1/entities"],
-        "0": ["region", "entities"],
-        "1": ["DIM1/region", "DIM1/entities"]
+        "-1": ["DIM-1/region", "DIM-1/poi", "DIM-1/entities"],
+        "0": ["region", "poi", "entities"],
+        "1": ["DIM1/region", "DIM1/poi", "DIM1/entities"]
     }
 }
 ```

@@ -13,9 +13,9 @@ class Config(Serializable):
 	source_world_directory: str = './qb_multi/slot1/world'
 	destination_world_directory: str = './server/world'
 	dimension_region_folder: Dict[str, Union[str, List[str]]] = {
-		'-1': 'DIM-1/region',
-		'0': 'region',
-		'1': 'DIM1/region'
+		'-1': ['DIM-1/region', 'DIM-1/poi'],
+		'0': ['region', 'poi'],
+		'1': ['DIM1/region', 'DIM1/poi']
 	}
 
 
@@ -79,8 +79,11 @@ class Region:
 
 def print_log(server: ServerInterface, msg: str):
 	server.logger.info(msg)
-	with open(LogFilePath, 'a') as logfile:
-		logfile.write(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ': ' + msg + '\n')
+	try:
+		with open(LogFilePath, 'a') as logfile:
+			logfile.write(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ': ' + msg + '\n')
+	except Exception as e:
+		server.logger.info('错误写入日志文件: {}'.format(e))
 
 
 def add_region(source: CommandSource, region: Region):
@@ -164,6 +167,9 @@ def region_update(source: CommandSource):
 			except Exception as e:
 				msg = '失败，错误信息：{}'.format(str(e))
 				flag = False
+				if isinstance(e, FileNotFoundError) and os.path.exists(destination):
+					os.remove(destination)
+					source.get_server().logger.info('在目的地被删除的文件: {}'.format(destination))
 			else:
 				msg = '成功'
 				flag = True

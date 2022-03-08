@@ -83,7 +83,7 @@ def print_log(server: ServerInterface, msg: str):
 		with open(LogFilePath, 'a') as logfile:
 			logfile.write(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())) + ': ' + msg + '\n')
 	except Exception as e:
-		server.logger.info('错误写入日志文件: {}'.format(e))
+		server.logger.error('无法写入日志文件: {}'.format(e))
 
 
 def add_region(source: CommandSource, region: Region):
@@ -159,17 +159,18 @@ def region_update(source: CommandSource):
 	historyList.clear()
 	for region in regionList:
 		for region_file in region.to_file_list():
-			source_dir = os.path.join(config.source_world_directory, region_file)
-			destination = os.path.join(config.destination_world_directory, region_file)
+			src_file = os.path.join(config.source_world_directory, region_file)
+			dest_file = os.path.join(config.destination_world_directory, region_file)
 			try:
-				source.get_server().logger.info('- "{}" -> "{}"'.format(source_dir, destination))
-				shutil.copyfile(source_dir, destination)
+				if not os.path.isfile(src_file) and os.path.isfile(dest_file):
+					os.remove(dest_file)
+					source.get_server().logger.info('- *deleted* -> "{}"'.format(src_file, dest_file))
+				else:
+					source.get_server().logger.info('- "{}" -> "{}"'.format(src_file, dest_file))
+					shutil.copyfile(src_file, dest_file)
 			except Exception as e:
 				msg = '失败，错误信息：{}'.format(str(e))
 				flag = False
-				if isinstance(e, FileNotFoundError) and os.path.exists(destination):
-					os.remove(destination)
-					source.get_server().logger.info('在目的地被删除的文件: {}'.format(destination))
 			else:
 				msg = '成功'
 				flag = True
